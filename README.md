@@ -3,7 +3,7 @@
 Real-time webcam filter that **recognizes your facial expression** and shows the matching hamster meme. It uses
 **MediaPipe Face Mesh** to extract facial landmarks and a **dense neural network** (Keras) to classify the expression.
 
-Project for the *Selected Topics in AI* course (8th semester, Computer Systems Engineering, Instituto Tecnológico de
+Final Project for the *Selected Topics in AI* course (8th semester, Computer Systems Engineering, Instituto Tecnológico de
 Mérida, Mexico).
 
 ![Filter demo](demo/demo.gif)
