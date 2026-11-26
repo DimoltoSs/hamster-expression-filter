@@ -1,139 +1,139 @@
-# Filtro de hamsters por expresión facial
+# Hamster Expression Filter
 
-Aplicación que reconoce **tu expresión facial en tiempo real** con la cámara y muestra el hamster que le corresponde.
-Se usa **MediaPipe Face Mesh** para obtener los puntos del rostro y una **red neuronal densa** (Keras) para
-clasificar la expresión.
+Real-time webcam filter that **recognizes your facial expression** and shows the matching hamster meme. It uses
+**MediaPipe Face Mesh** to extract facial landmarks and a **dense neural network** (Keras) to classify the expression.
 
-Proyecto de la materia *Tópicos Selectos de IA* (8.º semestre, Ingeniería en Sistemas Computacionales, Instituto
-Tecnológico de Mérida).
+Project for the *Selected Topics in AI* course (8th semester, Computer Systems Engineering, Instituto Tecnológico de
+Mérida, Mexico).
 
-![Demo del filtro](demo/demo.gif)
+![Filter demo](demo/demo.gif)
 
-[Ver el video completo (MP4)](demo/hamster-expression-filter-demo.mp4)
+[Watch the full video (MP4)](demo/hamster-expression-filter-demo.mp4)
 
-## Cómo funciona
+## How it works
 
 ```
-cámara → MediaPipe Face Mesh (478 puntos x, y, z) → normalización → red neuronal → promedio de cuadros → hamster
+webcam → MediaPipe Face Mesh (478 x, y, z points) → normalization → neural network → frame averaging → hamster
 ```
 
-1. **Datos:** para cada expresión se graban 300 cuadros con la cámara; cada cuadro se guarda como una fila con los
-   landmarks faciales crudos (`src/record_dataset.py`).
-2. **Normalización** (`src/features.py`): se centra el rostro, se escala por la distancia entre los ojos y se gira para
-   que los ojos queden horizontales. Así el modelo ve la forma de la cara y no dónde está ni qué tan cerca.
-3. **Modelo** (`src/train.py`): `Normalization → 128 → Dropout(0.3) → 64 → Dropout(0.3) → softmax`, entrenado con Adam
-   y `EarlyStopping`, que conserva los pesos de la mejor época.
-4. **Demo** (`src/filter_webcam.py`): promedia la predicción de los últimos 8 cuadros para que el hamster no parpadee y
-   no muestra nada si la confianza es menor a 60 %.
+1. **Data:** 300 webcam frames are recorded per expression; each frame is stored as a row of raw facial landmarks
+   (`src/record_dataset.py`).
+2. **Normalization** (`src/features.py`): each face is centered, scaled by the distance between the eyes and rotated so
+   the eyes are level. The model sees the shape of the face, not where it is or how close it is to the camera.
+3. **Model** (`src/train.py`): `Normalization → 128 → Dropout(0.3) → 64 → Dropout(0.3) → softmax`, trained with Adam
+   and `EarlyStopping`, which keeps the weights of the best epoch.
+4. **Demo** (`src/filter_webcam.py`): averages the predictions of the last 8 frames so the hamster doesn't flicker, and
+   shows nothing when confidence is below 60%.
 
-Clases: `hamsteraura`, `hamsterfeliz`, `hamsterlibroabierto`, `hamsterlupa`, `hamstermrbean`, `hamsterpaleta`,
-`hamsterenojado`, `hamsterasombrado`, `hamsternobrain` y `neutral` (cara en reposo, no muestra hamster). La clase
-`neutral` evita que una cara sin expresión se asigne a la clase más parecida.
+Classes: `hamsteraura`, `hamsterfeliz` (happy), `hamsterlibroabierto` (open book), `hamsterlupa` (magnifying glass),
+`hamstermrbean`, `hamsterpaleta` (lollipop), `hamsterenojado` (angry), `hamsterasombrado` (surprised),
+`hamsternobrain` and `neutral` (resting face, no hamster). The `neutral` class keeps a blank face from being assigned
+to the most similar expression.
 
-## Resultados
+## Results
 
-10 clases × 300 cuadros = 3000 muestras. La validación es **temporal**: los últimos 60 cuadros de cada grabación
-(20 %) no se usan para entrenar. Los cuadros seguidos son casi idénticos, y una división aleatoria mete "copias" del
-entrenamiento en la validación; con ella cualquier modelo marca ~99 %, una cifra que no dice nada.
+10 classes × 300 frames = 3,000 samples. Validation is **temporal**: the last 60 frames of each recording (20%) are
+held out from training. Consecutive frames are nearly identical, so a random split leaks near-copies of the training
+data into validation; with it, any model scores ~99%, which says nothing.
 
-**Red neuronal (modelo de la demo):** 90.0 % de accuracy en validación.
+**Neural network (the one used in the demo):** 90.0% validation accuracy.
 
-| Cambio respecto al notebook original (misma división temporal) | Accuracy |
+| Change from the original notebook (same temporal split) | Accuracy |
 |---|---|
-| Notebook original: landmarks crudos, sin estandarizar | 0.66 |
-| + estandarización de entradas (capa `Normalization`) | 0.83 |
-| + landmarks normalizados (posición, escala, rotación) y `EarlyStopping` | **0.90** |
+| Original notebook: raw landmarks, no input scaling | 0.66 |
+| + input standardization (`Normalization` layer) | 0.83 |
+| + normalized landmarks (position, scale, rotation) and `EarlyStopping` | **0.90** |
 
-**Comparación con otros clasificadores** (`src/compare_models.py`, misma división):
+**Comparison with other classifiers** (`src/compare_models.py`, same split):
 
-| Modelo | Landmarks crudos | Landmarks normalizados |
+| Model | Raw landmarks | Normalized landmarks |
 |---|---|---|
-| Regresión logística | 0.795 | 0.922 |
+| Logistic regression | 0.795 | 0.922 |
 | SVM (RBF, C=100) | 0.927 | 0.923 |
 | PCA(50) + SVM | 0.925 | 0.923 |
 | Random Forest | 0.743 | 0.885 |
 | KNN (k=5) | 0.782 | 0.838 |
-| MLP de scikit-learn | 0.740 | 0.860 |
+| scikit-learn MLP | 0.740 | 0.860 |
 
-La normalización mejora mucho a casi todos los modelos (regresión logística: +13 puntos). El SVM con RBF ya es robusto
-con los datos crudos. Con PCA, 50 componentes (de 1434) bastan para el mismo resultado.
+Normalization greatly improves almost every model (logistic regression: +13 points). The RBF SVM is already robust on
+raw data. With PCA, 50 components (out of 1,434) are enough for the same result.
 
-| Curvas de entrenamiento | Matriz de confusión |
+| Training curves | Confusion matrix |
 |---|---|
 | ![](results/training_curves.png) | ![](results/confusion_matrix.png) |
 
-**Dónde falla:** casi todos los errores están entre `neutral`, `hamsteraura` y `hamsterenojado`, que son expresiones
-serias muy parecidas entre sí. Las otras 7 clases tienen F1 ≥ 0.99. Mejorar estas tres es un tema de datos (expresiones
-más marcadas), no del modelo: todos los clasificadores tocan el mismo techo de ~92 %.
+**Where it fails:** almost all errors are between `neutral`, `hamsteraura` and `hamsterenojado`, three serious-looking
+expressions that are very similar. The other 7 classes reach F1 ≥ 0.99. Improving those three is a data problem (more
+distinct expressions), not a model problem: every classifier hits the same ~92% ceiling.
 
-**Limitaciones:** los datos son de una sola persona y de pocas sesiones de grabación. Para generalizar haría falta
-grabar a más personas y validar con personas que no estén en el entrenamiento.
+**Limitations:** the data comes from a single person and a few recording sessions. Generalizing would require recording
+more people and validating on people not seen during training.
 
-## Estructura
+## Project structure
 
 ```
 hamster-expression-filter/
 ├── src/
-│   ├── features.py         # normalización de landmarks (compartida por todo)
-│   ├── data.py             # carga de CSV y división temporal
-│   ├── record_dataset.py   # graba una expresión con la cámara y genera el CSV
-│   ├── train.py            # entrena la red y guarda curvas, matriz de confusión y métricas
-│   ├── compare_models.py   # compara clasificadores de scikit-learn
-│   └── filter_webcam.py    # demo en vivo con la cámara
+│   ├── features.py         # landmark normalization (shared by everything)
+│   ├── data.py             # CSV loading and temporal split
+│   ├── record_dataset.py   # records an expression from the webcam into a CSV
+│   ├── train.py            # trains the network; saves curves, confusion matrix and metrics
+│   ├── compare_models.py   # compares scikit-learn classifiers
+│   └── filter_webcam.py    # live webcam demo
 ├── models/
 │   ├── modelo_hamsters.keras
 │   └── clases.npy
-├── results/                # curvas, matriz de confusión, metrics.json, model_comparison.csv
-├── demo/                   # GIF y video de la demo
+├── results/                # curves, confusion matrix, metrics.json, model_comparison.csv
+├── demo/                   # demo GIF and video
 └── requirements.txt
 ```
 
-## Cómo usarlo
+## Usage
 
-Requiere **Python 3.11 o 3.12**. MediaPipe 0.10.21 no tiene versión para Python 3.13, y las versiones más nuevas de
-MediaPipe ya no incluyen la API `mp.solutions` que usa este proyecto. Usa un entorno virtual para no mezclar las
-versiones de TensorFlow y MediaPipe con las de otros proyectos.
+Requires **Python 3.11 or 3.12**. MediaPipe 0.10.21 has no build for Python 3.13, and newer MediaPipe releases dropped
+the `mp.solutions` API this project uses. Use a virtual environment so these TensorFlow and MediaPipe versions don't
+clash with other projects.
 
 ```bash
 git clone https://github.com/DimoltoSs/hamster-expression-filter.git
 cd hamster-expression-filter
 python -m venv .venv
-.venv\Scripts\activate        # en Linux/macOS: source .venv/bin/activate (el prompt debe mostrar "(.venv)")
+.venv\Scripts\activate        # Linux/macOS: source .venv/bin/activate (the prompt should show "(.venv)")
 pip install -r requirements.txt
 
 python src/filter_webcam.py
 ```
 
-Presiona `q` en la ventana para salir. Opciones: `--camera 1`, `--suavizado 10` (cuadros promediados) y `--umbral 0.7`
-(confianza mínima para mostrar un hamster).
+Press `q` in the window to quit. Options: `--camera 1`, `--suavizado 10` (number of frames averaged) and
+`--umbral 0.7` (minimum confidence to show a hamster).
 
-### Imágenes de los hamsters
+### Hamster images
 
-Las imágenes **no se incluyen** en el repositorio (son imágenes de terceros). Crea una carpeta `figuras/` y pon ahí un
-archivo por clase con los nombres que aparecen en el diccionario `FIGURAS` de `src/filter_webcam.py`. Si falta alguna,
-la demo funciona igual y solo muestra el nombre de la clase con su probabilidad.
+The images are **not included** in the repository (they are third-party memes). Create a `figuras/` folder and put one
+image per class there, using the file names listed in the `FIGURAS` dictionary in `src/filter_webcam.py`. If an image
+is missing, the demo still works and shows only the class name and probability.
 
-### Grabar tus propias expresiones y reentrenar
+### Record your own expressions and retrain
 
 ```bash
-python src/record_dataset.py --label hamsterfeliz --frames 300    # una vez por expresión
-python src/train.py                                               # entrena la red de la demo
-python src/compare_models.py                                      # opcional: compara otros modelos
+python src/record_dataset.py --label hamsterfeliz --frames 300    # once per expression
+python src/train.py                                               # trains the demo network
+python src/compare_models.py                                      # optional: compares other models
 ```
 
-Los CSV guardan los landmarks crudos; la normalización se aplica al entrenar y en la demo.
+The CSV files store raw landmarks; normalization is applied at training time and in the demo.
 
-## Tecnologías
+## Tech stack
 
 Python · TensorFlow/Keras · MediaPipe Face Mesh · OpenCV · scikit-learn · pandas
 
-## Créditos y licencias
+## Credits and licenses
 
-- **MediaPipe** (Google), licencia Apache 2.0.
-- Las imágenes de hamsters y memes pertenecen a sus respectivos autores. Aparecen en la demo, pero no se incluyen como
-  archivos en este repositorio.
-- Los datos de entrenamiento son landmarks del rostro del autor; no se publican.
+- **MediaPipe** (Google), Apache 2.0 license.
+- The hamster and meme images belong to their respective authors. They appear in the demo but are not included as files
+  in this repository.
+- The training data consists of the author's own facial landmarks and is not published.
 
-## Autor
+## Author
 
 Angel Josué López Castilla · [@DimoltoSs](https://github.com/DimoltoSs)
