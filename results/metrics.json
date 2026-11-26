@@ -1,0 +1,32 @@
+{
+  "split": "temporal",
+  "epochs_run": 26,
+  "best_epoch": 11,
+  "n_train": 2400,
+  "n_val": 600,
+  "classes": [
+    "hamsterasombrado",
+    "hamsteraura",
+    "hamsterenojado",
+    "hamsterfeliz",
+    "hamsterlibroabierto",
+    "hamsterlupa",
+    "hamstermrbean",
+    "hamsternobrain",
+    "hamsterpaleta",
+    "neutral"
+  ],
+  "val_accuracy": 0.9,
+  "per_class_f1": {
+    "hamsterasombrado": 1.0,
+    "hamsteraura": 0.681,
+    "hamsterenojado": 0.827,
+    "hamsterfeliz": 1.0,
+    "hamsterlibroabierto": 0.992,
+    "hamsterlupa": 1.0,
+    "hamstermrbean": 1.0,
+    "hamsternobrain": 0.992,
+    "hamsterpaleta": 1.0,
+    "neutral": 0.529
+  }
+}

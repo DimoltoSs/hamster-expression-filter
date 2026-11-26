@@ -1,0 +1,11 @@
+# Datos grabados (rostro propio; se regeneran con src/record_dataset.py)
+expresiones/
+
+# Imágenes de los hamsters (memes de terceros, no se redistribuyen)
+figuras/
+
+# Python / Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
